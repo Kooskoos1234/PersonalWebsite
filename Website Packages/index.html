@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Emscripten-Generated Code</title>
+    <style>body {
+  font-family: monospace;
+  margin: 0;
+  padding: none;
+}
+
+.emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+div.emscripten { text-align: center; }
+div.emscripten_border { border: 1px solid black; }
+
+@-webkit-keyframes rotation {
+  from {-webkit-transform: rotate(0deg);}
+  to {-webkit-transform: rotate(360deg);}
+}
+@-moz-keyframes rotation {
+  from {-moz-transform: rotate(0deg);}
+  to {-moz-transform: rotate(360deg);}
+}
+@-o-keyframes rotation {
+  from {-o-transform: rotate(0deg);}
+  to {-o-transform: rotate(360deg);}
+}
+@keyframes rotation {
+  from {transform: rotate(0deg);}
+  to {transform: rotate(360deg);}
+}
+
+#output {
+  width: 100%;
+  height: 300px;
+  margin: 0 auto;
+  margin-top: 10px;
+  border-left: 0px;
+  border-right: 0px;
+  padding-left: 0px;
+  padding-right: 0px;
+  display: block;
+  background-color: rgb(255, 255, 255);
+  color: rgb(0, 0, 0);
+  font-family: 'Lucida Console', Monaco, monospace;
+  outline: 0px;
+}
+</style>
+  </head>
+  <body>
+
+    <div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+
+    <textarea id="output" rows="8"></textarea>
+
+    <label style="color:rgb(255, 0, 0)">Length:&ensp;&nbsp;&nbsp;</label>
+    <input type="number" id="sortTestLength"><br>
+    
+    <label style="color:rgb(230, 230, 0)">Minimum:&nbsp;&nbsp;</label>
+    <input type="number" id="sortTestMinNum"><br>
+    
+    <label style="color:rgb(0, 0, 255)">Maximum:&nbsp;&nbsp;</label>
+    <input type="number" id="sortTestMaxNum"><br>
+    <button id="sortTest">Measure Sorting Algorithms</button><br>
+    
+    <br>
+
+    <label style="color:rgb(0, 0, 0)">Number:&nbsp;&nbsp;&nbsp;</label>
+    <input type="number" id="isPrimeInput"><br>
+
+    <button id="isPrime">Check if this Number is Prime</button><br>
+
+    <br>
+
+    <label style="color:rgb(255, 0, 0)">Magnitude:</label>
+    <input type="number" id="vector1Mag"><br>
+
+    <label style="color:rgb(255, 0, 0)">Angle:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+    <input type="number" id="vector1Angle"><br>
+
+    <label style="color:rgb(0, 0, 255)">Magnitude:</label>
+    <input type="number" id="vector2Mag"><br>
+
+    <label style="color:rgb(0, 0, 255)">Angle:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+    <input type="number" id="vector2Angle"><br>
+
+    <button id="addVectors">Add Vectors</button><br>
+
+    <br>
+
+    <script type='text/javascript'>
+      var statusElement = document.getElementById('status');
+      var progressElement = document.getElementById('progress');
+      var spinnerElement = document.getElementById('spinner');
+      var canvasElement = document.getElementById('canvas');
+      var outputElement = document.getElementById('output');
+      if (outputElement) outputElement.value = ''; // clear browser cache
+
+      var Module = {
+        print(...args) {
+          console.log(...args);
+          // These replacements are necessary if you render to raw HTML
+          //text = text.replace(/&/g, "&amp;");
+          //text = text.replace(/</g, "&lt;");
+          //text = text.replace(/>/g, "&gt;");
+          //text = text.replace('\n', '<br>', 'g');
+          if (outputElement) {
+            var text = args.join(' ');
+            outputElement.value += text + "\n";
+            outputElement.scrollTop = outputElement.scrollHeight; // focus on bottom
+          }
+        },
+        canvas: canvasElement,
+        setStatus(text) {
+          Module.setStatus.last ??= { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          // if this is a progress update, skip it if too soon
+          if (m && now - Module.setStatus.last.time < 30) return;
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+            progressElement.value = parseInt(m[2])*100;
+            progressElement.max = parseInt(m[4])*100;
+            progressElement.hidden = false;
+            spinnerElement.hidden = false;
+          } else {
+            progressElement.value = null;
+            progressElement.max = null;
+            progressElement.hidden = true;
+            if (!text) spinnerElement.style.display = 'none';
+          }
+          statusElement.innerHTML = text;
+        },
+        totalDependencies: 0,
+        monitorRunDependencies(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = (event) => {
+        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+        Module.setStatus('Exception thrown, see JavaScript console');
+        spinnerElement.style.display = 'none';
+        Module.setStatus = (text) => {
+          if (text) console.error('[post-exception status] ' + text);
+        };
+      };
+      
+      //Benchmark Sorting Algorithms
+      document.getElementById("sortTest").addEventListener("click", () => {
+        document.getElementById("output").value = '';
+        var arrayLength = parseInt(document.getElementById("sortTestLength").value);
+        var minimum = parseInt(document.getElementById("sortTestMinNum").value);
+        var maximum = parseInt(document.getElementById("sortTestMaxNum").value);
+        Module['sortDisplayStart'](arrayLength, minimum, maximum);
+      })
+
+      //Test if Prime
+      document.getElementById("isPrime").addEventListener("click", () => {
+          document.getElementById("output").value = '';
+          var shortList = Module['shortPrimeList']();
+          var numToCheck = parseFloat(document.getElementById("isPrimeInput").value);
+          if(numToCheck == 0 || numToCheck == 1)
+          {
+            outputElement.value += "Is " + numToCheck + " prime? No!\n";
+          }
+          else if(Math.floor(numToCheck) != numToCheck || numToCheck < 0)
+          {
+            outputElement.value += "Please enter a positive integer!\n";
+          }
+          else if(shortList.get(shortList.size()-1) >= Math.sqrt(numToCheck))
+          {
+            var isprime = Module['isPrime'](shortList, numToCheck);
+            var textOutput = "Is " + numToCheck + " prime? " + (isprime?"Yes!":"No!") + "\n";
+            outputElement.value += textOutput.toString();
+            textOutput = "";
+            if(isprime == false)
+            {
+                var factors = Module['primeFactors'](shortList, numToCheck);
+                textOutput += "Prime factors of " + numToCheck + ": ";
+                for(var i = 0; i < factors.size(); i++)
+                {
+                  if(i <= factors.size()-2)
+                  {
+                    textOutput += factors.get(i) + ", ";
+                  }
+                  else
+                  {
+                    textOutput += "and " + factors.get(i) + ".";
+                  }
+                }
+                textOutput += '\n';
+            }
+            outputElement.value += textOutput.toString();
+          }
+          else
+          {
+            outputElement.value += "Prime number list is not long enough to check if " + numToCheck + " is prime!\n";
+          }
+          
+      })
+
+      //Vector Addition
+      document.getElementById("addVectors").addEventListener("click", () => {
+        document.getElementById("output").value = '';
+        
+        var mag1 = parseFloat(document.getElementById("vector1Mag").value);
+        var mag2 = parseFloat(document.getElementById("vector2Mag").value);
+        var mags = [mag1, mag2];
+        var ang1 = parseFloat(document.getElementById("vector1Angle").value);
+        var ang2 = parseFloat(document.getElementById("vector2Angle").value);
+        var angs = [ang1, ang2];
+
+        var xComp = 0;
+	      var yComp = 0;
+
+      	for (var i = 0; i < 2; i++) {
+		      xComp += mags[i] * Math.cos(angs[i] * Math.PI / 180);
+		      yComp += mags[i] * Math.sin(angs[i] * Math.PI / 180);
+	      }
+
+	      var mag3 = Math.sqrt(Math.pow(xComp, 2) + Math.pow(yComp, 2));
+	      var ang3 = Math.abs(Math.atan(Math.abs(yComp) / Math.abs(xComp))) * 180 / Math.PI;
+	      var Q = (xComp >= 0) ? ((yComp >= 0) ? 1 : 4) : ((yComp >= 0) ? 2 : 3);
+
+	      switch (Q) {
+	        case 1:
+		        break;
+	        case 2:
+		        ang3 = 180 - ang3;
+		        break;
+	        case 3:
+		        ang3 += 180;
+		        break;
+	        case 4:
+		        ang3 = 360 - ang3;
+		        break;
+	      }
+
+      	mag3 = (Math.abs(xComp) <= 1e-8) && (Math.abs(yComp) <= 1e-8) ? 0 : mag3;
+	      ang3 = (Math.abs(xComp) <= 1e-8) && (Math.abs(yComp) <= 1e-8) ? 0 : ang3;
+	      ang3 = ((ang3 % 360) <= 360.1 && (ang3 % 360) >= 359.9) ? 0 : (ang3 % 360);
+
+        document.getElementById("output").value += ("The sum of the vectors has a magnitude of " + mag3 + " @ " + ang3 + "°");
+      })
+
+    </script>
+    <script async type="text/javascript" src="quick_example.js"></script>
+  </body>
+</html>
